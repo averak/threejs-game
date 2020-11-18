@@ -138,24 +138,23 @@ function update() {
   }
 
   // 当たり判定
-  let crash = false;
+  robot.material.color.setHex(0x00ff00);
   for (let i = 0; i < enemies.length; i++) {
-    if (
-      Math.abs(enemies[i].position.x - robot.position.x) <= 30 &&
-      Math.abs(enemies[i].position.y - robot.position.y) <= 30 &&
-      Math.abs(enemies[i].position.z - robot.position.z) <= 30
-    ) {
+    if (judgeCrash(enemies[i])) {
       scene.remove(enemies[i]);
       enemies.splice(i, 1);
-      crash = true;
+      robot.material.color.setHex(0x000000);
+      damage();
     }
   }
-  robot.material.color.setHex(0x00ff00);
-  // 衝突した場合
-  if (crash) {
-    robot.material.color.setHex(0x000000);
-    damage();
-  }
+}
+
+function judgeCrash(enemy) {
+  return (
+    Math.abs(enemy.position.x - robot.position.x) <= 30 + 25 &&
+    Math.abs(enemy.position.y - robot.position.y) <= 30 + 25 &&
+    Math.abs(enemy.position.z - robot.position.z) <= 30 + 25
+  );
 }
 
 function damage() {
