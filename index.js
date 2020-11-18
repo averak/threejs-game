@@ -2,11 +2,9 @@ let renderer, scene, camera;
 let clock = new THREE.Clock();
 let robot;
 let life;
+let enemies = [];
 let hp = 15;
 let gameOver = false;
-let crashID = "";
-let lastCrashID = "";
-let enemies = [];
 let keys = { UP: 38, DOWN: 40, RIGHT: 39, LEFT: 37 };
 let keyPressed = { UP: false, DOWN: false, RIGHT: false, LEFT: false };
 let level = 5; // ゲーム難易度（1〜10）
@@ -129,6 +127,7 @@ function update() {
     scene.add(enemy);
   }
 
+  // 敵を移動させる
   for (let i = 0; i < enemies.length; i++) {
     if (enemies[i].position.z > camera.position.z) {
       scene.remove(enemies[i]);
@@ -140,38 +139,22 @@ function update() {
 
   // 当たり判定
   let crash = false;
-  let originPoint = robot.position.clone();
-  for (
-    let vertexIndex = 0;
-    vertexIndex < robot.geometry.vertices.length;
-    vertexIndex++
-  ) {
-    let localVertex = robot.geometry.vertices[vertexIndex].clone();
-    let globalVertex = localVertex.applyMatrix4(robot.matrix);
-    let directionVector = globalVertex.sub(robot.position);
-
-    let ray = new THREE.Raycaster(
-      originPoint,
-      directionVector.clone().normalize()
-    );
-
-    enemy = ray.intersectObjects(enemies)[0];
-    if (enemy != undefined) {
-      // 衝突した場合
-      if (enemy.distance < directionVector.length()) {
-        scene.remove(enemy.object);
-        crashID = enemy.object.name;
-        crash = true;
-      }
+  for (let i = 0; i < enemies.length; i++) {
+    if (
+      Math.abs(enemies[i].position.x - robot.position.x) <= 30 &&
+      Math.abs(enemies[i].position.y - robot.position.y) <= 30 &&
+      Math.abs(enemies[i].position.z - robot.position.z) <= 30
+    ) {
+      scene.remove(enemies[i]);
+      enemies.splice(i, 1);
+      crash = true;
     }
   }
-
-  // 衝突した場合の処理
+  robot.material.color.setHex(0x00ff00);
+  // 衝突した場合
   if (crash) {
-    if (crashID !== lastCrashID) {
-      damage();
-      lastCrashID = crashID;
-    }
+    robot.material.color.setHex(0x000000);
+    damage();
   }
 }
 
@@ -179,7 +162,7 @@ function damage() {
   hp -= 1;
   let lifeGeometry = new THREE.BoxGeometry(hp * 2, 5, 1);
   life.geometry = lifeGeometry;
-  life.position.x -= 0.5;
+  life.position.x -= 1;
 
   let color;
   if (hp >= 10) {
@@ -217,7 +200,7 @@ function animate() {
 
   if (gameOver) {
     robot.material.color.setHex(0xff0000);
-    render()
+    render();
     cancelAnimationFrame(id);
   }
 }
