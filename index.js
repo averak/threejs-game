@@ -1,13 +1,25 @@
+// three object
 let renderer, scene, camera;
 let clock = new THREE.Clock();
 let robot;
 let life;
 let enemies = [];
-let hp = 15;
-let gameOver = false;
-let keys = { UP: 38, DOWN: 40, RIGHT: 39, LEFT: 37 };
-let keyPressed = { UP: false, DOWN: false, RIGHT: false, LEFT: false };
+
+// config
 let level = 5; // ゲーム難易度（1〜10）
+let hp = 15;
+let advanced = 0; // 前進した距離
+let jumpFlag = false;
+let jumpFrame = -10;
+let gameOver = false;
+let keys = { UP: 38, DOWN: 40, RIGHT: 39, LEFT: 37, JUMP: 32 };
+let keyPressed = {
+  UP: false,
+  DOWN: false,
+  RIGHT: false,
+  LEFT: false,
+  JUMP: false,
+};
 
 function init() {
   const width = window.innerWidth;
@@ -84,37 +96,78 @@ function createEnemy() {
 
   // ランダムな位置に作成
   let result = new THREE.Mesh(geometry, material);
-  result.position.set(rand(-275, 275), height / 2, rand(-1200, -800));
+  result.position.set(
+    rand(-275, 275),
+    height / 2,
+    rand(-1200, -800) - advanced
+  );
   result.name = Math.random().toString(32).substring(2);
   return result;
 }
 
 function update() {
+  // 前進
+  advanced++;
+  camera.position.z--;
+  robot.position.z--;
+  life.position.z--;
+
+  // ある程度前進したら元の位置に戻す
+  if (advanced % 400 == 0) {
+    advanced = 0;
+    camera.position.z += 400;
+    robot.position.z += 400;
+    life.position.z += 400;
+    for (let i=0; i<enemies.length; i++) enemies[i].position.z += 400;
+  }
+
   // 操作ロボットを移動
   let moveDistance = level * 50 * clock.getDelta();
   if (keyPressed["UP"]) {
-    if (robot.position.z > -400) {
+    if (camera.position.z - robot.position.z < 800) {
       robot.position.z -= moveDistance;
       life.position.z -= moveDistance;
+      robot.rotation.x -= 0.1;
     }
   }
   if (keyPressed["DOWN"]) {
-    if (robot.position.z < 0) {
+    if (camera.position.z - robot.position.z > 400) {
       robot.position.z += moveDistance;
       life.position.z += moveDistance;
+      robot.rotation.x += 0.1;
     }
   }
   if (keyPressed["RIGHT"]) {
     if (robot.position.x < 300) {
       robot.position.x += moveDistance;
       life.position.x += moveDistance;
+      robot.rotation.z -= 0.1;
+    }
+    if (camera.position.x < 150) {
+      camera.position.x += moveDistance * 0.6;
+      if (camera.rotation.z < (5 * Math.PI) / 180) {
+        camera.rotation.z += (0.2 * Math.PI) / 180;
+      }
     }
   }
   if (keyPressed["LEFT"]) {
     if (robot.position.x > -300) {
       robot.position.x -= moveDistance;
       life.position.x -= moveDistance;
+      robot.rotation.z += 0.1;
     }
+    if (camera.position.x > -150) {
+      camera.position.x -= moveDistance * 0.6;
+      if (camera.rotation.z > (-5 * Math.PI) / 180) {
+        camera.rotation.z -= (0.2 * Math.PI) / 180;
+      }
+    }
+  }
+  if (!(keyPressed["RIGHT"] || keyPressed["LEFT"])) {
+    camera.rotation.z -= camera.rotation.z / 10;
+  }
+  if (keyPressed["JUMP"]) {
+    jumpFlag = true;
   }
 
   // 一定確率で敵オブジェクトを作成
@@ -134,6 +187,17 @@ function update() {
       enemies.splice(i, 1);
     } else {
       enemies[i].position.z += level * 2.5;
+    }
+  }
+
+  // ジャンプ
+  if (jumpFlag) {
+    jumpFrame += 0.7;
+    let delte = -Math.pow(jumpFrame, 2) + 100;
+    robot.position.y = delte * 1.2 + 30;
+    if (robot.position.y <= 30) {
+      jumpFlag = false;
+      jumpFrame = -10;
     }
   }
 
